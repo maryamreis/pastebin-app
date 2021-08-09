@@ -41,9 +41,12 @@ app.get("/pastes", async (req, res) => {
 });
 
 app.post("/pastes", async (req, res) => {
-  const {paste_text, paste_title} = req.body;
+  const {pasteText, pasteTitle} = req.body;
+  // console.log(paste_text)
+  // console.log(paste_title)
+  console.log(req.body.pasteText)
   try {
-    await client.query('INSERT INTO paste_text (paste_text, paste_title) VALUES ($1, $2)', [paste_text, paste_title])
+    await client.query('INSERT INTO paste_text (paste_text, paste_title) VALUES ($1, $2)', [pasteText, pasteTitle])
 
     res.status(201).json({
       status: "success",})
@@ -56,7 +59,33 @@ app.post("/pastes", async (req, res) => {
     });
 
   }
-})
+});
+
+app.delete("/pastes/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+
+  const queryResult: any = await client.query('DELETE FROM paste_text WHERE id = $1', [id]);
+  const didRemove = queryResult.rowCount === 1;
+
+  if (didRemove) {
+    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE#responses
+    // we've gone for '200 response with JSON body' to respond to a DELETE
+    //  but 204 with no response body is another alternative:
+    //  res.status(204).send() to send with status 204 and no JSON body
+    res.status(200).json({
+      status: "success",
+    });
+  } else {
+    res.status(404).json({
+      status: "fail",
+      data: {
+        error: ("Could not find a signature with that id identifier"),
+      },
+    }); 
+    }
+  }
+);
+
 
 //Start the server on the given port
 const port = process.env.PORT;
