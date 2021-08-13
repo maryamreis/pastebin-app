@@ -40,6 +40,22 @@ app.get("/pastes", async (req, res) => {
   }
 });
 
+app.get("/pastes/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+
+  try {
+    const dbres = await client.query('select * from paste_text WHERE id=$1', [id]);
+    res.json(dbres.rows);
+    
+  } catch (error) {
+    console.error(error.message)
+    res.status(404).json({
+      status: "fail",
+      error: error.message
+    }) 
+  }
+});
+
 app.post("/pastes", async (req, res) => {
   const {pasteText, pasteTitle} = req.body;
   // console.log(paste_text)
@@ -61,10 +77,28 @@ app.post("/pastes", async (req, res) => {
   }
 });
 
+//create put request
+app.put("/pastes/:id", async (req, res) => {
+
+  const id = parseInt(req.params.id);
+  const {pasteText, pasteTitle} = req.body;
+  console.log(req.body, id);
+  try {
+    await client.query('UPDATE paste_text SET paste_text=$1, paste_title=$2 WHERE id=$3', [pasteText, pasteTitle, id])
+    res.status(201).json({
+      status: "success",})
+
+  } catch (error) {
+    console.error(error.message)
+    
+  }
+  
+});
+
 app.delete("/pastes/:id", async (req, res) => {
   const id = parseInt(req.params.id);
 
-  const queryResult: any = await client.query('DELETE FROM paste_text WHERE id = $1', [id]);
+  const queryResult: any = await client.query('DELETE FROM paste_text WHERE id = $1; DELETE FROM comments WHERE paste_id = $1;', [id]);
   const didRemove = queryResult.rowCount === 1;
 
   if (didRemove) {
@@ -85,6 +119,75 @@ app.delete("/pastes/:id", async (req, res) => {
     }
   }
 );
+
+
+///////// comments /////////
+
+app.get("/comments", async (req, res) => {
+  console.log(res)
+  try {
+    const response = await client.query('SELECT * FROM comments');
+    res.json(response.rows);
+    // const responseJson = res.json(response.rows);
+    // console.log(responseJson)
+    
+    
+  } catch (error) {
+    console.error(error.message)
+    res.status(404).json({
+      status: "fail",
+      error: error.message
+    }) 
+  }
+});
+
+
+app.delete("/comments/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+
+  const queryResult: any = await client.query('DELETE FROM comments WHERE comment_id = $1;', [id]);
+  const didRemove = queryResult.rowCount === 1;
+
+  if (didRemove) {
+    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE#responses
+    // we've gone for '200 response with JSON body' to respond to a DELETE
+    //  but 204 with no response body is another alternative:
+    //  res.status(204).send() to send with status 204 and no JSON body
+    res.status(200).json({
+      status: "success",
+    });
+  } else {
+    res.status(404).json({
+      status: "fail",
+      data: {
+        error: ("Could not find a signature with that id identifier"),
+      },
+    }); 
+    }
+  }
+);
+
+app.post("/pastes/:id/comments", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const {comment} = req.body;
+  console.log(req.body.comment)
+
+  try {
+    await client.query('INSERT INTO comments (comment, paste_id) VALUES ($1, $2)', [comment, id])
+
+    res.status(201).json({
+      status: "success",})
+    
+  } catch (error) {
+      console.error(error.message)
+      res.status(400).json({
+        status: "fail",
+        error: error.message
+    });
+
+  }
+});
+
 
 
 //Start the server on the given port
