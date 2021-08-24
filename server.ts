@@ -60,7 +60,6 @@ app.post("/pastes", async (req, res) => {
   const {pasteText, pasteTitle} = req.body;
   // console.log(paste_text)
   // console.log(paste_title)
-  console.log(req.body.pasteText)
   try {
     await client.query('INSERT INTO paste_text (paste_text, paste_title) VALUES ($1, $2)', [pasteText, pasteTitle])
 
@@ -82,7 +81,7 @@ app.put("/pastes/:id", async (req, res) => {
 
   const id = parseInt(req.params.id);
   const {pasteText, pasteTitle} = req.body;
-  console.log(req.body, id);
+  
   try {
     await client.query('UPDATE paste_text SET paste_text=$1, paste_title=$2 WHERE id=$3', [pasteText, pasteTitle, id])
     res.status(201).json({
@@ -98,35 +97,36 @@ app.put("/pastes/:id", async (req, res) => {
 app.delete("/pastes/:id", async (req, res) => {
   const id = parseInt(req.params.id);
 
-  const queryResult: any = await client.query('DELETE FROM paste_text WHERE id = $1; DELETE FROM comments WHERE paste_id = $1;', [id]);
-  const didRemove = queryResult.rowCount === 1;
 
-  if (didRemove) {
-    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE#responses
-    // we've gone for '200 response with JSON body' to respond to a DELETE
-    //  but 204 with no response body is another alternative:
-    //  res.status(204).send() to send with status 204 and no JSON body
+  try {
+    await client.query('DELETE FROM comments WHERE paste_id = $1', [id]);
+    await client.query('DELETE FROM paste_text WHERE id = $1', [id]);
     res.status(200).json({
       status: "success",
     });
-  } else {
+    
+  } catch (error) {
     res.status(404).json({
       status: "fail",
       data: {
         error: ("Could not find a signature with that id identifier"),
       },
     }); 
-    }
+  }
+
   }
 );
 
 
 ///////// comments /////////
 
-app.get("/comments", async (req, res) => {
-  console.log(res)
+app.get("/pastes/comments/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+
+  //console.log(res);
+
   try {
-    const response = await client.query('SELECT * FROM comments');
+    const response = await client.query('SELECT * FROM comments WHERE paste_id = $1', [id]);
     res.json(response.rows);
     // const responseJson = res.json(response.rows);
     // console.log(responseJson)
@@ -145,36 +145,42 @@ app.get("/comments", async (req, res) => {
 app.delete("/comments/:id", async (req, res) => {
   const id = parseInt(req.params.id);
 
-  const queryResult: any = await client.query('DELETE FROM comments WHERE comment_id = $1;', [id]);
-  const didRemove = queryResult.rowCount === 1;
-
-  if (didRemove) {
-    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE#responses
-    // we've gone for '200 response with JSON body' to respond to a DELETE
-    //  but 204 with no response body is another alternative:
-    //  res.status(204).send() to send with status 204 and no JSON body
+  try {
+    const queryResult: any = await client.query('DELETE FROM comments WHERE comment_id = $1;', [id]);
+    // const didRemove = queryResult.rowCount === 1;
     res.status(200).json({
       status: "success",
     });
-  } else {
+    
+  } catch (error) {
     res.status(404).json({
       status: "fail",
       data: {
         error: ("Could not find a signature with that id identifier"),
       },
     }); 
-    }
+    
   }
-);
+})
 
-app.post("/pastes/:id/comments", async (req, res) => {
-  const id = parseInt(req.params.id);
-  const {comment} = req.body;
-  console.log(req.body.comment)
+  // if (didRemove) {
+  //   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE#responses
+  //   // we've gone for '200 response with JSON body' to respond to a DELETE
+  //   //  but 204 with no response body is another alternative:
+  //   //  res.status(204).send() to send with status 204 and no JSON body
+    
+  // } 
+  // }
+
+
+//app.post("/pastes/:id/comments", async (req, res) => {
+app.post("/pastes/comments", async (req, res) => {
+  // const id = parseInt(req.params.id);
+  const {comment, id} = req.body;
 
   try {
     await client.query('INSERT INTO comments (comment, paste_id) VALUES ($1, $2)', [comment, id])
-
+    
     res.status(201).json({
       status: "success",})
     
